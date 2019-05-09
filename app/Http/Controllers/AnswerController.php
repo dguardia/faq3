@@ -6,43 +6,65 @@ use App\Answer;
 use App\Question;
 use Illuminate\Support\Facades\Auth;
 
+use Illuminate\Http\Request;
+
 class AnswerController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
     /**
      * Display a listing of the resource.
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
-    {
-        //
-    }
-
     /**
      * Show the form for creating a new resource.
      *
+     * @param $question
      * @return \Illuminate\Http\Response
      */
-    public function create()
+    public function create($question)
     {
-        //
+        $answer = new Answer;
+        $edit = FALSE;
+        return view('answerForm', ['answer' => $answer,'edit' => $edit, 'question' =>$question  ]);
     }
 
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param \Illuminate\Http\Request $request
+     * @param $question
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request)
+    public function store(Request $request, $question)
     {
-        //
+
+        $input = $request->validate([
+            'body' => 'required|min:5',
+        ], [
+
+            'body.required' => 'Body is required',
+            'body.min' => 'Body must be at least 5 characters',
+
+        ]);
+        $input = request()->all();
+        $question = Question::find($question);
+        $Answer = new Answer($input);
+        $Answer->user()->associate(Auth::user());
+        $Answer->question()->associate($question);
+        $Answer->save();
+
+        return redirect()->route('question.show',['question_id' => $question->id])->with('message', 'Saved');
     }
 
     /**
      * Display the specified resource.
      *
-     * @param  int  $id
+     * @param $question
+     * @param $answer
      * @return \Illuminate\Http\Response
      */
     public function show($question,  $answer)
@@ -56,34 +78,57 @@ class AnswerController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param  int  $id
+     * @param $question
+     * @param $answer
      * @return \Illuminate\Http\Response
      */
-    public function edit($id)
+    public function edit($question,  $answer)
     {
-        //
+        $answer = Answer::find($answer);
+        $edit = TRUE;
+        return view('answerForm', ['answer' => $answer, 'edit' => $edit, 'question'=>$question ]);
     }
 
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
+     * @param \Illuminate\Http\Request $request
+     * @param $question
+     * @param $answer
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, $question, $answer)
     {
-        //
+        $input = $request->validate([
+            'body' => 'required|min:5',
+        ], [
+
+            'body.required' => 'Body is required',
+            'body.min' => 'Body must be at least 5 characters',
+
+        ]);
+
+        $answer = Answer::find($answer);
+        $answer->body = $request->body;
+        $answer->save();
+
+        return redirect()->route('answer.show',['question_id' => $question, 'answer_id' => $answer])->with('message', 'Updated');
+
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param  int  $id
+     * @param $question
+     * @param $answer
      * @return \Illuminate\Http\Response
      */
-    public function destroy($id)
+    public function destroy($question, $answer)
     {
-        //
+        $answer = Answer::find($answer);
+
+        $answer->delete();
+        return redirect()->route('question.show',['question_id' => $question])->with('message', 'Delete');
+
     }
 }
